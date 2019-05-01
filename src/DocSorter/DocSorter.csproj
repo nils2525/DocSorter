@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="IronPdf" Version="5.2.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-    <PackageReference Include="PDFsharp" Version="1.50.5147" />
   </ItemGroup>
 
 </Project>

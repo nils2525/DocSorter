@@ -11,8 +11,40 @@ namespace DocSorter.Data
         private const string ConfigPath = "config.json";
         internal static List<Models.SortingEntry> SortingEntries { get; set; }
 
+        private static FileSystemWatcher _fileWatcher;
+
+        private static void InitFileWatcher()
+        {
+            if (_fileWatcher == null)
+            {
+                _fileWatcher = new FileSystemWatcher(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+                _fileWatcher.Changed += _fileWatcher_Changed;
+                _fileWatcher.EnableRaisingEvents = true;
+            }
+        }
+
+        private static void _fileWatcher_Changed(object sender, FileSystemEventArgs e)
+        {
+            _fileWatcher.EnableRaisingEvents = false;
+
+            Console.WriteLine("Config changed. Reinit...");
+            foreach(var entry in SortingService.Instances)
+            {
+                entry.Stop();
+            }
+
+            SortingService.Instances = new List<SortingService>();
+
+            ReadConfig();
+            SortingService.InitServices();
+
+            _fileWatcher.EnableRaisingEvents = true;
+        }
+
         internal static void ReadConfig()
         {
+            InitFileWatcher();
+
             if (File.Exists(ConfigPath))
             {
                 var configJson = File.ReadAllText(ConfigPath);
@@ -22,7 +54,25 @@ namespace DocSorter.Data
             else
             {
                 //Create empty config
-                File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(new List<Models.SortingEntry> { new Models.SortingEntry() { Substitutions = new List<Models.RegexSubstitution>() { new Models.RegexSubstitution() } } }, Formatting.Indented));
+                File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(new List<Models.SortingEntry>
+                {
+                    new Models.SortingEntry()
+                    {
+                        Substitutions = new List<Models.RegexSubstitution>()
+                        {
+                            new Models.RegexSubstitution()
+                        },
+                        SortingConditions = new List<Models.SortingCondition>()
+                        {
+                            new Models.SortingCondition()
+                            { 
+                            Substitutions = new List<Models.RegexSubstitution>()
+                            }
+                        }
+                    }
+                }, Formatting.Indented));
+
+                SortingEntries = new List<Models.SortingEntry>();
             }
         }
     }

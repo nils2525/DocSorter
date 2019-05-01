@@ -14,15 +14,7 @@ namespace DocSorter
             LogInformation = args.Contains("--debug");
 
             Data.Configuration.ReadConfig();
-
-            var instances = new List<SortingService>();
-
-            foreach (var entry in Data.Configuration.SortingEntries)
-            {
-                var instance = new SortingService(entry);
-                instance.Start();
-                instances.Add(instance);
-            }
+            SortingService.InitServices();
 
             //Prevents closing console
             new Task(() => { Task.Delay(-1); }).Wait(-1);
