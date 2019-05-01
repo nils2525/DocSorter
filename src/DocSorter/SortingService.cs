@@ -45,6 +45,7 @@ namespace DocSorter
             _fileWatcher.Created += _fileWatcher_Created;
             _fileWatcher.Changed += _fileWatcher_Changed;
             _fileWatcher.Renamed += _fileWatcher_Renamed;
+            _fileWatcher.IncludeSubdirectories = _sortingEntry.IncludeSubfolders;
             _fileWatcher.EnableRaisingEvents = true;
 
             Console.WriteLine("Start service for folder " + _sortingEntry.SourceFolder);
@@ -82,6 +83,8 @@ namespace DocSorter
                 return;
             }
 
+            bool conditionMatched = false;
+
             foreach (var condition in _sortingEntry.SortingConditions)
             {
                 if (!String.IsNullOrWhiteSpace(condition.FileNameCondition) && !Regex.IsMatch(fullPath, condition.FileNameCondition))
@@ -94,7 +97,13 @@ namespace DocSorter
                 {
                     //Content matches, move file
                     MoveFile(fullPath, condition);
+                    conditionMatched = true;
                 }
+            }
+
+            if (!conditionMatched)
+            {
+                MoveFile(fullPath, new SortingCondition() { DestinationFolder = _sortingEntry.SourceFolder });
             }
         }
 
@@ -140,8 +149,12 @@ namespace DocSorter
 
             //Move file to new position
             var fullDestinationPath = Path.Combine(condition.DestinationFolder, newFilename);
-            Console.WriteLine("Moving '" + fullPath + "' to '" + fullDestinationPath + "'");
-            File.Move(fullPath, fullDestinationPath);
+
+            if (fullPath != fullDestinationPath)
+            {
+                Console.WriteLine("Moving '" + fullPath + "' to '" + fullDestinationPath + "'");
+                File.Move(fullPath, fullDestinationPath);
+            }
         }
 
         /// <summary>
