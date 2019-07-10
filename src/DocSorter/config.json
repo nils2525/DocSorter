@@ -1,0 +1,20 @@
+[
+  {
+    "SourceFolder": null,
+    "IncludeSubfolders": false,
+    "SortingConditions": [
+      {
+        "FileNameCondition": null,
+        "FileContentCondition": null,
+        "DestinationFolder": null,
+        "Substitutions": []
+      }
+    ],
+    "Substitutions": [
+      {
+        "RegexCondition": null,
+        "Replacement": null
+      }
+    ]
+  }
+]
