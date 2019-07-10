@@ -2,13 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace DocSorter.Data
 {
     internal static class Configuration
     {
-        private const string ConfigPath = "config.json";
+        private static readonly string ConfigPath = Path.Combine(Program.BaseDirectory, "config.json");
         internal static List<Models.SortingEntry> SortingEntries { get; set; }
 
         private static FileSystemWatcher _fileWatcher;
@@ -17,7 +18,7 @@ namespace DocSorter.Data
         {
             if (_fileWatcher == null)
             {
-                _fileWatcher = new FileSystemWatcher(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+                _fileWatcher = new FileSystemWatcher(Program.BaseDirectory, "config.json");
                 _fileWatcher.Changed += _fileWatcher_Changed;
                 _fileWatcher.EnableRaisingEvents = true;
             }
@@ -27,8 +28,8 @@ namespace DocSorter.Data
         {
             _fileWatcher.EnableRaisingEvents = false;
 
-            Console.WriteLine("Config changed. Reinit...");
-            foreach(var entry in SortingService.Instances)
+            Logger.CreateLog("Config changed. Reinit...");
+            foreach (var entry in SortingService.Instances)
             {
                 entry.Stop();
             }
@@ -47,32 +48,46 @@ namespace DocSorter.Data
 
             if (File.Exists(ConfigPath))
             {
-                var configJson = File.ReadAllText(ConfigPath);
-                var sortingEntries = JsonConvert.DeserializeObject<List<Models.SortingEntry>>(configJson);
-                SortingEntries = sortingEntries;
+                try
+                {
+                    var configJson = File.ReadAllText(ConfigPath);
+                    var sortingEntries = JsonConvert.DeserializeObject<List<Models.SortingEntry>>(configJson);
+                    SortingEntries = sortingEntries;
+                }
+                catch (Exception ex)
+                {
+                    Logger.CreateLog(ex.Message);
+                }
             }
             else
             {
-                //Create empty config
-                File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(new List<Models.SortingEntry>
+                try
                 {
-                    new Models.SortingEntry()
+                    //Create empty config
+                    File.WriteAllText(ConfigPath, JsonConvert.SerializeObject(new List<Models.SortingEntry>
                     {
-                        Substitutions = new List<Models.RegexSubstitution>()
+                        new Models.SortingEntry()
                         {
-                            new Models.RegexSubstitution()
-                        },
-                        SortingConditions = new List<Models.SortingCondition>()
-                        {
-                            new Models.SortingCondition()
-                            { 
                             Substitutions = new List<Models.RegexSubstitution>()
+                            {
+                                new Models.RegexSubstitution()
+                            },
+                            SortingConditions = new List<Models.SortingCondition>()
+                            {
+                                new Models.SortingCondition()
+                                {
+                                Substitutions = new List<Models.RegexSubstitution>()
+                                }
                             }
                         }
-                    }
-                }, Formatting.Indented));
+                    }, Formatting.Indented));
 
-                SortingEntries = new List<Models.SortingEntry>();
+                    SortingEntries = new List<Models.SortingEntry>();
+                }
+                catch (Exception ex)
+                {
+                    Logger.CreateLog(ex.Message);
+                }
             }
         }
     }

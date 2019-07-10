@@ -48,7 +48,7 @@ namespace DocSorter
             _fileWatcher.IncludeSubdirectories = _sortingEntry.IncludeSubfolders;
             _fileWatcher.EnableRaisingEvents = true;
 
-            Console.WriteLine("Start service for folder " + _sortingEntry.SourceFolder);
+            Logger.CreateLog("Start service for folder " + _sortingEntry.SourceFolder);
             return true;
         }
 
@@ -152,8 +152,16 @@ namespace DocSorter
 
             if (fullPath != fullDestinationPath)
             {
-                Console.WriteLine("Moving '" + fullPath + "' to '" + fullDestinationPath + "'");
-                File.Move(fullPath, fullDestinationPath);
+                Logger.CreateLog("Moving '" + fullPath + "' to '" + fullDestinationPath + "'");
+
+                try
+                {
+                    File.Move(fullPath, fullDestinationPath);
+                }
+                catch (Exception ex)
+                {
+                    Logger.CreateLog(ex.Message);
+                }               
             }
         }
 
