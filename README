@@ -1,0 +1,17 @@
+# DocSorter
+
+A useful tool to automatically sort & rename your documents/files
+
+## Features
+
+- Monitor a specific folder for file changes
+- Automatically rename & move file to a specific folder
+- Datetime parameters
+
+## Installation
+
+ToDo
+
+## Configuration
+
+ToDo
