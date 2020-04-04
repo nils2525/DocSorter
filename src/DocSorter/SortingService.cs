@@ -98,6 +98,7 @@ namespace DocSorter
                     //Content matches, move file
                     MoveFile(fullPath, condition);
                     conditionMatched = true;
+                    break;
                 }
             }
 
@@ -137,18 +138,21 @@ namespace DocSorter
         /// <param name="fullPath"></param>
         private void MoveFile(string fullPath, SortingCondition condition)
         {
-            //Create destination folder if not exist
-            if (!Directory.Exists(condition.DestinationFolder))
-            {
-                Directory.CreateDirectory(condition.DestinationFolder);
-            }
 
             //Get new file name
             var fileName = Path.GetFileName(fullPath);
             var newFilename = UpdateFileName(fileName, condition);
 
             //Move file to new position
-            var fullDestinationPath = Path.Combine(condition.DestinationFolder, newFilename);
+            var fullDestinationPath = FillCustomParameters(FillDateParameters(Path.Combine(condition.DestinationFolder, newFilename)));
+            var destinationFolder = Path.GetDirectoryName(fullDestinationPath);
+            
+            //Create destination folder if not exist
+            if (!Directory.Exists(destinationFolder))
+            {
+                Directory.CreateDirectory(destinationFolder);
+            }
+
 
             if (fullPath != fullDestinationPath)
             {
@@ -156,6 +160,11 @@ namespace DocSorter
 
                 try
                 {
+                    while (File.Exists(fullDestinationPath))
+                    {
+                        fullDestinationPath = IncrementFileNumber(fullDestinationPath);
+                    }
+
                     File.Move(fullPath, fullDestinationPath);
                 }
                 catch (Exception ex)
@@ -184,6 +193,76 @@ namespace DocSorter
             }
 
             return newName;
+        }
+
+        /// <summary>
+        /// Fill datetime to pathe where parameter is specified with $$x$$
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private string FillDateParameters(string filePath)
+        {
+            var result = filePath;
+
+            var matches = Regex.Matches(filePath, @"(?<=\$\$).*(?=\$\$)");
+            foreach(Match dateParameter in matches)
+            {
+                var formattedDate = DateTime.Now.ToString(dateParameter.Value);
+                result = result.Replace("$$" + dateParameter.Value + "$$", formattedDate);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Fille custom regex parameters §§x§§
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private string FillCustomParameters(string filePath)
+        {
+            var result = filePath;
+
+            var matches = Regex.Matches(filePath, @"(?<=§§).*(?=§§)");
+            foreach(Match match in matches)
+            {
+                var replaceValue = Regex.Match(filePath, match.Value);
+                result = result.Replace("§§" + match.Value + "§§", replaceValue.Value);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Increment file number
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        private string IncrementFileNumber(string filePath)
+        {
+            var searchPattern = @"(?<=_).(?=\..{2,4}$)";
+            var newNumberPattern = @"\..{2,4}$";
+
+            var result = filePath;
+
+            var existingNumber = Regex.Match(filePath, searchPattern);
+            if (existingNumber.Success && Int32.TryParse(existingNumber.Value, out int currentNumber))
+            {
+                result = Regex.Replace(filePath, searchPattern, (++currentNumber).ToString());
+            }
+            else
+            {
+                var fileEnd = Regex.Match(filePath, newNumberPattern);
+                result = filePath.Replace(fileEnd.Value, "_2" + fileEnd);
+            }
+
+            if(result == filePath)
+            {
+                // Incrementing number failed. Add current ticks as an alternative to filepath
+                result += DateTime.Now.Ticks;
+            }
+
+            return result;
         }
     }
 }
