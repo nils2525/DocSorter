@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 namespace DocSorter.Data
 {
@@ -48,6 +49,7 @@ namespace DocSorter.Data
 
             if (File.Exists(ConfigPath))
             {
+                Thread.Sleep(500);
                 try
                 {
                     var configJson = File.ReadAllText(ConfigPath);

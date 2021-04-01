@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace DocSorter
 {
@@ -49,6 +50,14 @@ namespace DocSorter
             _fileWatcher.EnableRaisingEvents = true;
 
             Logger.CreateLog("Start service for folder " + _sortingEntry.SourceFolder);
+
+
+            foreach (var file in Directory.GetFiles(_sortingEntry.SourceFolder, String.Empty, _sortingEntry.IncludeSubfolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+            {
+                HandleSingleFile(file);
+            }
+
+
             return true;
         }
 
@@ -75,8 +84,6 @@ namespace DocSorter
 
         private void HandleSingleFile(string fullPath)
         {
-            Thread.Sleep(1000);
-
             if (String.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath))
             {
                 //File not exist
@@ -91,6 +98,12 @@ namespace DocSorter
                 {
                     //Regex does not match
                     continue;
+                }
+
+
+                if (!WaitForFileAccess(fullPath))
+                {
+                    return;
                 }
 
                 if (FileContentMatches(fullPath, condition))
@@ -146,7 +159,7 @@ namespace DocSorter
             //Move file to new position
             var fullDestinationPath = FillCustomParameters(FillDateParameters(Path.Combine(condition.DestinationFolder, newFilename)));
             var destinationFolder = Path.GetDirectoryName(fullDestinationPath);
-            
+
             //Create destination folder if not exist
             if (!Directory.Exists(destinationFolder))
             {
@@ -170,7 +183,7 @@ namespace DocSorter
                 catch (Exception ex)
                 {
                     Logger.CreateLog(ex.Message);
-                }               
+                }
             }
         }
 
@@ -205,7 +218,7 @@ namespace DocSorter
             var result = filePath;
 
             var matches = Regex.Matches(filePath, @"(?<=\$\$).*(?=\$\$)");
-            foreach(Match dateParameter in matches)
+            foreach (Match dateParameter in matches)
             {
                 var formattedDate = DateTime.Now.ToString(dateParameter.Value);
                 result = result.Replace("$$" + dateParameter.Value + "$$", formattedDate);
@@ -224,7 +237,7 @@ namespace DocSorter
             var result = filePath;
 
             var matches = Regex.Matches(filePath, @"(?<=§§).*(?=§§)");
-            foreach(Match match in matches)
+            foreach (Match match in matches)
             {
                 var replaceValue = Regex.Match(filePath, match.Value);
                 result = result.Replace("§§" + match.Value + "§§", replaceValue.Value);
@@ -256,13 +269,48 @@ namespace DocSorter
                 result = filePath.Replace(fileEnd.Value, "_2" + fileEnd);
             }
 
-            if(result == filePath)
+            if (result == filePath)
             {
                 // Incrementing number failed. Add current ticks as an alternative to filepath
                 result += DateTime.Now.Ticks;
             }
 
             return result;
+        }
+
+
+        private bool WaitForFileAccess(string filePath)
+        {
+            var isUsed = true;
+
+            var currentTime = DateTime.Now.AddHours(1);
+            while (isUsed)
+            {
+                try
+                {
+                    var file = new FileInfo(filePath);
+                    using (FileStream stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.None))
+                    {
+                        stream.Close();
+                        isUsed = false;
+                    }
+                }
+                catch (IOException)
+                {
+                    if (currentTime <= DateTime.Now)
+                    {
+                        return false;
+                    }
+
+                    Thread.Sleep(1000);
+                    //the file is unavailable because it is:
+                    //still being written to
+                    //or being processed by another thread
+                    //or does not exist (has already been processed)
+                }
+            }
+
+            return true;
         }
     }
 }
